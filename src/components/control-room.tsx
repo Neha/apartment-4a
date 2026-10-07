@@ -136,8 +136,7 @@ export function ControlRoom() {
         <div className="brand">
           <img className="mark" src="/logo.svg" alt="" />
           <div>
-            <strong>Agent Room</strong>
-            <span>Apartment 4A</span>
+            <strong>Apartment 4A</strong>
           </div>
         </div>
         <p className="tagline">A team of agents, one task at a time.</p>

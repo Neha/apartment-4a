@@ -1,4 +1,4 @@
-# Agent Room
+# Apartment 4A
 
 A local control room for a software team of Cursor agents. The user assigns one task and does not name teammates. The server runs the lead, then the specialists that the task text implies, one writer at a time.
 

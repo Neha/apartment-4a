@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Privacy · Agent Room",
-  description: "What Agent Room stores on your machine and what it sends to Cursor.",
+  title: "Privacy · Apartment 4A",
+  description: "What Apartment 4A stores on your machine and what it sends to Cursor.",
 };
 
 export default function PrivacyPage() {
@@ -13,7 +13,7 @@ export default function PrivacyPage() {
         <Link href="/">Back to the room</Link>
       </p>
       <h1>Privacy policy</h1>
-      <p>Agent Room runs on your computer. It does not have its own account, and it does not sell data.</p>
+      <p>Apartment 4A runs on your computer. It does not have its own account, and it does not sell data.</p>
 
       <h2>What stays on this machine</h2>
       <ul>
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
 
       <h2>Links</h2>
       <p>
-        The About page links to Neha Sharma on LinkedIn and X. Those sites have their own privacy policies. Agent Room does not receive data from them.
+        The About page links to Neha Sharma on LinkedIn and X. Those sites have their own privacy policies. Apartment 4A does not receive data from them.
       </p>
 
       <h2>Contact</h2>

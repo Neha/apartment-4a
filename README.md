@@ -1,8 +1,8 @@
-# Agent Room · Apartment 4A
+# Apartment 4A
 
 A local control room for a team of Cursor agents. You assign one task. The app reads the wording, lines up the people who should work, and runs one writer at a time in a folder on your machine.
 
-![Agent Room](docs/screenshot.png)
+![Apartment 4A](docs/screenshot.png)
 
 ## How to use it
 

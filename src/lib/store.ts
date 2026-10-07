@@ -50,7 +50,7 @@ function freshStore(): Store {
   const agents = Object.fromEntries(AGENT_IDS.map((id) => [id, freshAgent()])) as Store["agents"];
   return {
     version: 1,
-    project: { name: "Agent Room", repoPath: defaultRepoPath() },
+    project: { name: "Apartment 4A", repoPath: defaultRepoPath() },
     agents,
     tasks: [],
     runs: [],

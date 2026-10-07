@@ -86,7 +86,7 @@ export function beginLogin(): { status: "ready" | "waiting" } {
 
   void Cursor.auth
     .login({
-      apiKeyName: "Agent Room",
+      apiKeyName: "Apartment 4A",
       onLoginUrl: (url) => {
         current.loginUrl = url;
         publish();
