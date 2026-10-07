@@ -2,6 +2,8 @@
 
 A local control room for a team of Cursor agents. You assign one task. The app reads the wording, lines up the people who should work, and runs one writer at a time in a folder on your machine.
 
+<video src="demo/apartment-4a-x-linkedin.mp4" controls width="100%"></video>
+
 ![Sign in to Apartment 4A](docs/login.png)
 
 ![The room after you sign in](docs/room.png)
@@ -50,10 +52,10 @@ Leonard always starts. The server then adds up to three teammates from the words
 | Build, CI, or scripts | Howard |
 | Bugs, logs, or crashes | Raj |
 | Tests or a check | Amy |
-| Implementation or code | Bernadette |
+| Implementation, code, or develop | Bernadette |
 | A question only | Leonard answers, then Penny explains the result. |
 
-One person writes at a time. The next person sees the original task and the notes so far. Penny covers project status, product, and UX. When the task did not already include her, she still closes it and explains what was asked, what the team did, and the next step. Bernadette writes the code when the task asks for an implementation.
+One person writes at a time. The next person sees the original task and the notes so far. Penny covers project status, product, and UX. When the task did not already include her, she still closes it and explains what was asked, what the team did, and the next step. Bernadette writes the code when the task asks to implement or develop something.
 
 ## Where the record lives
 

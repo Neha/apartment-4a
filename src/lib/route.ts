@@ -27,7 +27,7 @@ export function specialistsForTask(text: string): SpecialistId[] {
   if (/\b(build|ci|deploy|script|pipeline)\b/.test(task)) add(order, "howard");
   if (/\b(bug|debug|log|crash|failing)\b/.test(task)) add(order, "raj");
   if (/\b(test|check|verify|missing|qa)\b/.test(task)) add(order, "amy");
-  if (/\b(code|implement|refactor|feature|component|endpoint|function)\b/.test(task)) add(order, "bernadette");
+  if (/\b(code|implement|refactor|feature|component|endpoint|function|develop(?:s|ing|ment)?)\b/.test(task)) add(order, "bernadette");
   return order;
 }
 

@@ -1,3 +1,4 @@
+.DS_Store
 node_modules
 .next
 data/*.json
@@ -7,3 +8,4 @@ data/*.tmp
 *.tsbuildinfo
 workspace/*
 !workspace/hello.txt
+demo/

@@ -14,7 +14,7 @@ const SPECIALISTS = `Teammates you may hand work to:
 - howard: build, CI, and tooling
 - raj: debugging and logs
 - amy: testing
-- bernadette: implementation and code
+- bernadette: implementation, code, and development
 
 End your reply with a trailer in exactly this shape, and write nothing after it:
 
