@@ -52,11 +52,10 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
 .brand strong { display: block; font-size: 14px; }
 .brand span { color: var(--muted); font-size: 12px; }
 .mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  background: #e6c36a;
-  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: block;
 }
 .tagline { margin: 0; color: var(--muted); font-size: 13px; flex: 1; }
 .top-meta { display: flex; gap: 16px; align-items: center; color: var(--muted); font-size: 13px; }

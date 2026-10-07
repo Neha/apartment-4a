@@ -134,10 +134,10 @@ export function ControlRoom() {
     <div className="shell">
       <header className="topbar">
         <div className="brand">
-          <span className="mark" aria-hidden="true" />
+          <img className="mark" src="/logo.svg" alt="" />
           <div>
             <strong>Agent Room</strong>
-            <span>v0.1.0</span>
+            <span>Apartment 4A</span>
           </div>
         </div>
         <p className="tagline">A team of agents, one task at a time.</p>

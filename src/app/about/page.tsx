@@ -14,7 +14,7 @@ export default function AboutPage() {
       </p>
       <h1>About Agent Room</h1>
       <p>
-        Agent Room is a local control room for a small team of Cursor agents. You assign one task. The app reads the wording, lines the team up, and runs one person at a time in your project folder.
+        Agent Room, Apartment 4A, is a local control room for a small team of Cursor agents. You assign one task. The app reads the wording, lines the team up, and runs one person at a time in your project folder.
       </p>
       <p>You do not name who should work. A question stays with the lead. A request to write, build, debug, or check brings in the matching teammates.</p>
 
