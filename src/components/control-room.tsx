@@ -100,6 +100,11 @@ export function ControlRoom() {
     }
   }
 
+  async function signOut() {
+    await fetch("/api/logout", { method: "POST" });
+    window.location.assign("/login");
+  }
+
   async function connect() {
     setFormError(null);
     const response = await fetch("/api/connect", { method: "POST" });
@@ -137,9 +142,20 @@ export function ControlRoom() {
           <img className="mark" src="/logo.svg" alt="" />
           <div>
             <strong>Apartment 4A</strong>
+            <span>BazingaAI</span>
           </div>
         </div>
-        <p className="tagline">A team of agents, one task at a time.</p>
+        <nav className="top-nav" aria-label="Main">
+          <button type="button" className={view === "room" ? "top-link top-link-on" : "top-link"} onClick={() => setView("room")}>
+            Apartment
+          </button>
+          <button type="button" className={view === "project" ? "top-link top-link-on" : "top-link"} onClick={() => setView("project")}>
+            Tasks
+          </button>
+          <button type="button" className={view === "settings" ? "top-link top-link-on" : "top-link"} onClick={openSettings}>
+            Settings
+          </button>
+        </nav>
         <div className="top-meta">
           <span className="online-count">
             <i className={online > 0 ? "dot dot-on" : "dot"} />
@@ -224,8 +240,14 @@ export function ControlRoom() {
             <span className="side-foot-links">
               <Link href="/about">About</Link>
               <Link href="/privacy">Privacy</Link>
+              <a href="https://github.com/Neha/apartment-4a" target="_blank" rel="noopener noreferrer">
+                GitHub
+              </a>
             </span>
             <span>© 2026 Neha Sharma</span>
+            <button type="button" className="sign-out" onClick={() => void signOut()}>
+              Sign out
+            </button>
             <span className="side-foot-links">
               <a href="https://www.linkedin.com/in/nehha/" rel="noreferrer">LinkedIn</a>
               <a href="https://x.com/hellonehha" rel="noreferrer">X</a>

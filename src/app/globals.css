@@ -57,7 +57,24 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
   border-radius: 6px;
   display: block;
 }
-.tagline { margin: 0; color: var(--muted); font-size: 13px; flex: 1; }
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+.top-link {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #c5d0e0;
+  text-decoration: none;
+  font-size: 13px;
+  padding: 6px 12px;
+}
+.top-link:hover { background: #1c2638; color: #fff; }
+.top-link-on { background: #2f6bff; color: #fff; }
+.top-link-on:hover { background: #2f6bff; color: #fff; }
 .top-meta { display: flex; gap: 16px; align-items: center; color: var(--muted); font-size: 13px; }
 .online-count { display: flex; align-items: center; gap: 8px; }
 
@@ -202,6 +219,16 @@ button:focus-visible, a:focus-visible, textarea:focus-visible, input:focus-visib
 .side-foot-links { display: flex; gap: 10px; }
 .side-foot a { color: #b9d0ff; text-decoration: none; }
 .side-foot a:hover { text-decoration: underline; }
+.sign-out {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #b9d0ff;
+  font-size: 11px;
+}
+.sign-out:hover { text-decoration: underline; }
 
 .info-page {
   max-width: 640px;

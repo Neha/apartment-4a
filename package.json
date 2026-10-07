@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test src/lib/handoff.test.ts src/lib/events.test.ts src/lib/route.test.ts",
+    "test": "tsx --test src/lib/handoff.test.ts src/lib/events.test.ts src/lib/route.test.ts src/lib/session.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
