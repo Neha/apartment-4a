@@ -30,24 +30,28 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="info-page">
-      <h1>Apartment 4A</h1>
-      <p>Sign in to open the room. The Cursor key stays on this machine and is only used after you sign in.</p>
-      <form className="settings" onSubmit={(event) => void submit(event)}>
-        <label>
-          Password
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </label>
-        {error ? <p className="form-error">{error}</p> : null}
-        <button type="submit" className="primary" disabled={pending || !password}>
-          {pending ? "Signing in" : "Sign in"}
-        </button>
-      </form>
+    <main className="login-screen">
+      <section className="login-card">
+        <img className="login-logo" src="/logo.svg" alt="" />
+        <p className="login-brand">BazingaAI</p>
+        <h1>Apartment 4A</h1>
+        <p className="login-copy">Sign in to open the room. The Cursor key stays on this machine.</p>
+        <form className="settings" onSubmit={(event) => void submit(event)}>
+          <label>
+            Password
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          {error ? <p className="form-error">{error}</p> : null}
+          <button type="submit" className="primary" disabled={pending || !password}>
+            {pending ? "Signing in" : "Sign in"}
+          </button>
+        </form>
+      </section>
     </main>
   );
 }

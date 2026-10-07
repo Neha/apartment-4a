@@ -10,6 +10,43 @@ import { PixelHead } from "./pixel-head";
 
 type View = "room" | "project" | "integrations" | "settings";
 
+const STAR_WARS_NAMES = [
+  "Luke Skywalker",
+  "Leia Organa",
+  "Han Solo",
+  "Chewbacca",
+  "Obi-Wan Kenobi",
+  "Darth Vader",
+  "Yoda",
+  "Padmé Amidala",
+  "Anakin Skywalker",
+  "Rey",
+  "Finn",
+  "Poe Dameron",
+  "Lando Calrissian",
+  "Ahsoka Tano",
+  "Grogu",
+  "Mace Windu",
+  "Qui-Gon Jinn",
+  "R2-D2",
+  "C-3PO",
+  "Boba Fett",
+];
+
+function pickWelcomeName(): string {
+  const pick = () => STAR_WARS_NAMES[Math.floor(Math.random() * STAR_WARS_NAMES.length)];
+  try {
+    const key = "apartment-welcome-name";
+    const stored = sessionStorage.getItem(key);
+    if (stored && STAR_WARS_NAMES.includes(stored)) return stored;
+    const name = pick();
+    sessionStorage.setItem(key, name);
+    return name;
+  } catch {
+    return pick();
+  }
+}
+
 export function ControlRoom() {
   const [state, setState] = useState<PublicState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -21,6 +58,7 @@ export function ControlRoom() {
   const [clock, setClock] = useState("");
   const [projectName, setProjectName] = useState("");
   const [repoPath, setRepoPath] = useState("");
+  const [welcomeName, setWelcomeName] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -44,6 +82,10 @@ export function ControlRoom() {
       window.clearInterval(poll);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    setWelcomeName(pickWelcomeName());
+  }, []);
 
   useEffect(() => {
     const format = () =>
@@ -162,6 +204,10 @@ export function ControlRoom() {
             {online}/{state?.agents.length ?? 7} online
           </span>
           <time>{clock}</time>
+          {welcomeName ? <p className="welcome">Welcome, {welcomeName}</p> : null}
+          <button type="button" className="sign-out" onClick={() => void signOut()}>
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -245,9 +291,6 @@ export function ControlRoom() {
               </a>
             </span>
             <span>© 2026 Neha Sharma</span>
-            <button type="button" className="sign-out" onClick={() => void signOut()}>
-              Sign out
-            </button>
             <span className="side-foot-links">
               <a href="https://www.linkedin.com/in/nehha/" rel="noreferrer">LinkedIn</a>
               <a href="https://x.com/hellonehha" rel="noreferrer">X</a>

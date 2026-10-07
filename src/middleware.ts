@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
 function isPublic(pathname: string): boolean {
   if (pathname === "/login" || pathname === "/api/login") return true;
   if (pathname.startsWith("/_next") || pathname === "/favicon.ico" || pathname === "/logo.svg") return true;
-  if (pathname === "/apartment.jpg" || pathname.startsWith("/heads/")) return true;
+  if (pathname === "/apartment.jpg" || pathname === "/login-bg.jpg" || pathname.startsWith("/heads/")) return true;
   return false;
 }
 

@@ -13,7 +13,7 @@ A local control room for a team of Cursor agents. You assign one task. The app r
 5. Type one task in **Give your team a task** and choose **Assign Task**. Do not name who should do it.
 6. Watch **This task** on the left. It lists the lineup and who is working now.
 7. Select a person to read their short update on the right. **Read the full note** opens the longer write-up.
-8. When the task finishes, the lineup clears and everyone returns to idle. **Sign out** is at the bottom of the left panel. The sign-in lasts 7 days on this browser.
+8. When the task finishes, the lineup clears and everyone returns to idle. **Sign out** is in the top-right corner. The sign-in lasts 7 days on this browser.
 
 Past tasks are under **Project** in the left panel. That list shows the last 8 tasks. The app keeps the last 40 in a local file. Nothing expires by time. The 41st task drops the oldest one the next time the file is saved.
 
