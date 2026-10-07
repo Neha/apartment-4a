@@ -26,3 +26,9 @@ test("implementation brings the coder, then Penny closes", () => {
   assert.deepEqual(specialistsForTask("Implement the login form component"), ["bernadette"]);
   assert.deepEqual(pipelineForTask("Implement the login form component"), ["leonard", "bernadette", "penny"]);
 });
+
+test("design and develop brings architecture and the coder", () => {
+  const text = "design & develop a pwa music player on which user can upload the file and play the music";
+  assert.deepEqual(specialistsForTask(text), ["sheldon", "bernadette"]);
+  assert.deepEqual(pipelineForTask(text), ["leonard", "sheldon", "bernadette", "penny"]);
+});
