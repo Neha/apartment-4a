@@ -4,6 +4,8 @@ A local control room for a team of Cursor agents. You assign one task. The app r
 
 ![Sign in to Apartment 4A](docs/login.png)
 
+![The room after you sign in](docs/room.png)
+
 ## Why you sign in
 
 The app is a website on your computer, and `npm run dev` also prints a network address. Anyone who can open that page could otherwise assign tasks and use the Cursor key stored on the machine. Those tasks can edit files in the folder you point at.
@@ -108,7 +110,8 @@ src/app            pages and API routes
 src/components     room, roster, and inspector
 src/lib            roster, routing, store, and the Cursor run
 public             room art and portraits
-docs/login.png
+docs/login.png     sign-in screen
+docs/room.png      the room after sign-in
 workspace          default folder agents edit
 ```
 
