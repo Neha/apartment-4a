@@ -7,12 +7,13 @@ A local control room for a team of Cursor agents. You assign one task. The app r
 ## How to use it
 
 1. Install and start the app (see [Run locally](#run-locally)).
-2. Connect Cursor with an API key or the Integrations panel.
-3. In Settings, confirm the folder the agents may edit. The default is `workspace/`.
-4. Type one task in **Give your team a task** and choose **Assign Task**. Do not name who should do it.
-5. Watch **This task** on the left. It lists the lineup and who is working now.
-6. Select a person to read their short update on the right. **Read the full note** opens the longer write-up.
-7. When the task finishes, the lineup clears and everyone returns to idle.
+2. Set `APP_PASSWORD` in `.env.local` and restart. Sign in with that password. The room stays closed until you do, so the Cursor key is not usable by anyone else who can open the page.
+3. Connect Cursor with an API key or the Integrations panel.
+4. In Settings, confirm the folder the agents may edit. The default is `workspace/`.
+5. Type one task in **Give your team a task** and choose **Assign Task**. Do not name who should do it.
+6. Watch **This task** on the left. It lists the lineup and who is working now.
+7. Select a person to read their short update on the right. **Read the full note** opens the longer write-up.
+8. When the task finishes, the lineup clears and everyone returns to idle. **Sign out** is in the top-right corner. The sign-in lasts 7 days on this browser.
 
 Past tasks are under **Project** in the left panel. That list shows the last 8 tasks. The app keeps the last 40 in a local file. Nothing expires by time. The 41st task drops the oldest one the next time the file is saved.
 

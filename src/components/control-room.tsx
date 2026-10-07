@@ -10,6 +10,43 @@ import { PixelHead } from "./pixel-head";
 
 type View = "room" | "project" | "integrations" | "settings";
 
+const STAR_WARS_NAMES = [
+  "Luke Skywalker",
+  "Leia Organa",
+  "Han Solo",
+  "Chewbacca",
+  "Obi-Wan Kenobi",
+  "Darth Vader",
+  "Yoda",
+  "Padmé Amidala",
+  "Anakin Skywalker",
+  "Rey",
+  "Finn",
+  "Poe Dameron",
+  "Lando Calrissian",
+  "Ahsoka Tano",
+  "Grogu",
+  "Mace Windu",
+  "Qui-Gon Jinn",
+  "R2-D2",
+  "C-3PO",
+  "Boba Fett",
+];
+
+function pickWelcomeName(): string {
+  const pick = () => STAR_WARS_NAMES[Math.floor(Math.random() * STAR_WARS_NAMES.length)];
+  try {
+    const key = "apartment-welcome-name";
+    const stored = sessionStorage.getItem(key);
+    if (stored && STAR_WARS_NAMES.includes(stored)) return stored;
+    const name = pick();
+    sessionStorage.setItem(key, name);
+    return name;
+  } catch {
+    return pick();
+  }
+}
+
 export function ControlRoom() {
   const [state, setState] = useState<PublicState | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -21,6 +58,7 @@ export function ControlRoom() {
   const [clock, setClock] = useState("");
   const [projectName, setProjectName] = useState("");
   const [repoPath, setRepoPath] = useState("");
+  const [welcomeName, setWelcomeName] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -44,6 +82,10 @@ export function ControlRoom() {
       window.clearInterval(poll);
     };
   }, [refresh]);
+
+  useEffect(() => {
+    setWelcomeName(pickWelcomeName());
+  }, []);
 
   useEffect(() => {
     const format = () =>
@@ -100,6 +142,11 @@ export function ControlRoom() {
     }
   }
 
+  async function signOut() {
+    await fetch("/api/logout", { method: "POST" });
+    window.location.assign("/login");
+  }
+
   async function connect() {
     setFormError(null);
     const response = await fetch("/api/connect", { method: "POST" });
@@ -137,15 +184,30 @@ export function ControlRoom() {
           <img className="mark" src="/logo.svg" alt="" />
           <div>
             <strong>Apartment 4A</strong>
+            <span>BazingaAI</span>
           </div>
         </div>
-        <p className="tagline">A team of agents, one task at a time.</p>
+        <nav className="top-nav" aria-label="Main">
+          <button type="button" className={view === "room" ? "top-link top-link-on" : "top-link"} onClick={() => setView("room")}>
+            Apartment
+          </button>
+          <button type="button" className={view === "project" ? "top-link top-link-on" : "top-link"} onClick={() => setView("project")}>
+            Tasks
+          </button>
+          <button type="button" className={view === "settings" ? "top-link top-link-on" : "top-link"} onClick={openSettings}>
+            Settings
+          </button>
+        </nav>
         <div className="top-meta">
           <span className="online-count">
             <i className={online > 0 ? "dot dot-on" : "dot"} />
             {online}/{state?.agents.length ?? 7} online
           </span>
           <time>{clock}</time>
+          {welcomeName ? <p className="welcome">Welcome, {welcomeName}</p> : null}
+          <button type="button" className="sign-out" onClick={() => void signOut()}>
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -224,6 +286,9 @@ export function ControlRoom() {
             <span className="side-foot-links">
               <Link href="/about">About</Link>
               <Link href="/privacy">Privacy</Link>
+              <a href="https://github.com/Neha/apartment-4a" target="_blank" rel="noopener noreferrer">
+                GitHub
+              </a>
             </span>
             <span>© 2026 Neha Sharma</span>
             <span className="side-foot-links">
