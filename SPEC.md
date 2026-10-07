@@ -32,8 +32,8 @@ Acceptance criteria:
 Acceptance criteria:
 
 1. WHEN the task asks for a written note or page, THE app SHALL run Sheldon, then Penny, then Amy after Leonard, in that order.
-2. WHEN the task is only a question, THE app SHALL stop after Leonard.
-3. WHEN the task names build, debugging, testing, or status work, THE app SHALL run the matching specialists, at most three, after Leonard.
+2. WHEN the task is only a question, THE app SHALL run Leonard, then Penny.
+3. WHEN the task names build, debugging, testing, implementation, product, or status work, THE app SHALL run the matching specialists, at most three, after Leonard. WHEN Penny is not already one of those specialists, THE app SHALL run her after them to explain the result. Bernadette runs when the task asks for code.
 4. THE app SHALL run only one writer at a time.
 5. WHEN a specialist runs, THE app SHALL pass the original task and the notes from earlier agents.
 

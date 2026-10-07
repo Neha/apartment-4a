@@ -24,7 +24,19 @@ Until `APP_PASSWORD` is set, the room stays closed. After you sign in, this brow
 6. Select a person to read their short update on the right. **Read the full note** opens the longer write-up.
 7. When the task finishes, the lineup clears and everyone returns to idle. Sign out from the top-right corner when you are done.
 
-Past tasks are under **Tasks**. That list shows the last 8 tasks. The app keeps the last 40. Nothing expires by time. The 41st task drops the oldest one the next time the record is saved. On your computer that record is `data/store.json`. On a server, set `DATABASE_URL` and the same record lives in Postgres.
+Past tasks are under **Tasks**. See [Where the record lives](#where-the-record-lives).
+
+## The team
+
+| Person | Role |
+| --- | --- |
+| Leonard | Team lead. Starts every task. |
+| Sheldon | Architecture |
+| Penny | Project manager, product, and UX. Gives the last status when the task did not already include her. |
+| Howard | DevOps and build |
+| Raj | Debugging and logs |
+| Amy | Testing and QA |
+| Bernadette | Coder. Implements the slice when the task asks for code. |
 
 ## How the team is chosen
 
@@ -32,16 +44,24 @@ Leonard always starts. The server then adds up to three teammates from the words
 
 | If the task is about | Who runs after Leonard |
 | --- | --- |
-| Writing a note or page | Sheldon (structure), Penny (wording), Amy (check) |
+| Writing a note or page | Sheldon (structure), Penny (product and status), Amy (check) |
 | Architecture or design | Sheldon |
-| Requirements or UX copy | Penny |
+| Requirements, UX, or status | Penny |
 | Build, CI, or scripts | Howard |
 | Bugs, logs, or crashes | Raj |
 | Tests or a check | Amy |
-| Status or progress | Bernadette |
-| A question only | Nobody. Leonard answers and stops. |
+| Implementation or code | Bernadette |
+| A question only | Leonard answers, then Penny explains the result. |
 
-One person writes at a time. The next person sees the original task and the notes so far.
+One person writes at a time. The next person sees the original task and the notes so far. Penny covers project status, product, and UX. When the task did not already include her, she still closes it and explains what was asked, what the team did, and the next step. Bernadette writes the code when the task asks for an implementation.
+
+## Where the record lives
+
+On your own computer, tasks, runs, discussion, and agent status stay in `data/store.json`. Leave `DATABASE_URL` unset.
+
+On a server, set `DATABASE_URL` to a Postgres database. The app creates the tables on startup and keeps one state document plus rows for tasks, runs, discussion, the file path each person touches, and a log of those steps. People using the site do not manage a data file. The database stores the path of each file, not a copy of the file. Agents still edit `workspace/` on the machine running the app. Mount that folder if those files should remain after a new container.
+
+The app keeps the last 40 tasks. Nothing expires by time. The 41st task drops the oldest one the next time the record is saved. **Tasks** in the room shows the last 8.
 
 ## Run locally
 
@@ -60,6 +80,7 @@ Open `.env.local` and set a password only you know. Leave the Cursor key empty f
 APP_PASSWORD=choose-a-password
 CURSOR_API_KEY=
 CURSOR_MODEL=composer-2.5
+DATABASE_URL=
 ```
 
 Start the app:
@@ -81,9 +102,7 @@ npm test
 npm run typecheck
 ```
 
-This app needs a long-running process. It is not a fit for Vercel. Agents edit files in `workspace/` on the machine running the app.
-
-To host it, set `DATABASE_URL` to a Postgres database. Tasks, discussion, agent status, every file path the team touches, and a log of those steps stay there across deploys. People using the site do not manage a data file. The team still writes project files in `workspace/` on the server. Mount that folder if those files should remain after a new container. The database keeps the path of each file, not a copy of the file.
+This app needs a long-running process. It is not a fit for Vercel. Agents edit files in `workspace/` on the machine running the app. To host it, set `DATABASE_URL` as described in [Where the record lives](#where-the-record-lives). Set `COOKIE_SECURE=false` only when you serve the app over plain HTTP on a trusted LAN. In production the session cookie is Secure, and browsers drop it on `http://`.
 
 ## Code guidelines
 
@@ -109,7 +128,7 @@ To host it, set `DATABASE_URL` to a Postgres database. Tasks, discussion, agent 
 ```text
 src/app            pages and API routes
 src/components     room, roster, and inspector
-src/lib            roster, routing, store, and the Cursor run
+src/lib            roster, routing, store, Postgres, and the Cursor run
 public             room art and portraits
 docs/login.png     sign-in screen
 docs/room.png      the room after sign-in

@@ -6,7 +6,7 @@ import { applyEvent, type KnownEvent, type RunDraft } from "./events";
 import { parseHandoff, type Handoff } from "./handoff";
 import { publish } from "./hub";
 import { rosterEntry } from "./roster";
-import { pipelineForTask } from "./route";
+import { pipelineForTask, specialistsForTask } from "./route";
 import { isBusy, loadStore, setBusy, updateStore } from "./store";
 import { AGENT_IDS, type AgentId, type RunRecord } from "./types";
 
@@ -200,26 +200,28 @@ async function markTask(taskId: string, status: "finished" | "error"): Promise<v
 
 async function runPipeline(taskId: string, taskText: string, repoPath: string): Promise<void> {
   try {
-    const specialists = pipelineForTask(taskText).filter((id) => id !== "leonard" && id !== "bernadette");
+    const selected = specialistsForTask(taskText);
+    const pennyCloses = !selected.includes("penny");
+    const specialists = pipelineForTask(taskText).filter((id) => id !== "leonard" && !(id === "penny" && pennyCloses));
     const teamLine =
       specialists.length > 0
-        ? `The server will run these teammates after you, in order: ${specialists.join(", ")}. Bernadette explains the result to the user after that. Write the plan only. Do not produce the final deliverable.`
-        : "Do this task yourself. Bernadette explains the result to the user afterwards.";
+        ? `The server will run these teammates after you, in order: ${specialists.join(", ")}.${pennyCloses ? " Penny explains the result to the user after that." : ""} Write the plan only. Do not produce the final deliverable.`
+        : "Do this task yourself. Penny explains the result to the user afterwards.";
     const leadPrompt = `${rosterEntry("leonard").prompt}\n\n${teamLine}\n\nTask:\n${taskText}`;
     const follow = [...specialists];
-    const lead = await runAgent(taskId, "leonard", leadPrompt, repoPath, specialists[0] ?? "bernadette");
+    const lead = await runAgent(taskId, "leonard", leadPrompt, repoPath, specialists[0] ?? (pennyCloses ? "penny" : null));
     if (!lead.ok) {
       await markTask(taskId, "error");
       return;
     }
-    if (lead.handoff.agentId && lead.handoff.agentId !== "bernadette" && !follow.includes(lead.handoff.agentId)) {
+    if (lead.handoff.agentId && lead.handoff.agentId !== "penny" && !follow.includes(lead.handoff.agentId)) {
       follow.push(lead.handoff.agentId);
     }
 
     let notes = lead.handoff.summary;
     for (let index = 0; index < follow.length; index += 1) {
       const specialistId = follow[index];
-      const nextId = follow[index + 1] ?? "bernadette";
+      const nextId = follow[index + 1] ?? (pennyCloses ? "penny" : null);
       await ensureRun(taskId, specialistId, "Picking up the handoff");
       const specialist = rosterEntry(specialistId);
       const prompt = `${specialist.prompt}\n\nOriginal task:\n${taskText}\n\nNotes so far:\n${notes || "Leonard finished the plan."}`;
@@ -230,11 +232,15 @@ async function runPipeline(taskId: string, taskText: string, repoPath: string): 
       }
       if (followUp.handoff.summary) notes = `${notes}\n${followUp.handoff.summary}`.trim();
     }
-    await ensureRun(taskId, "bernadette", "Writing the conclusion");
+    if (!pennyCloses) {
+      await markTask(taskId, "finished");
+      return;
+    }
+    await ensureRun(taskId, "penny", "Writing the conclusion");
     const closing = await runAgent(
       taskId,
-      "bernadette",
-      `You are Bernadette, the project manager. The team finished a task. Do not change files. Tell the user what happened, in everyday language.
+      "penny",
+      `You are Penny, the project manager for product and UX. The team finished a task. Do not change files. Tell the user what happened, in everyday language.
 
 Write two or three short sentences: what they asked for, what the team actually did, and the next step. No jargon and no code.
 
