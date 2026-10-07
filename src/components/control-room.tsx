@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { pipelineForTask } from "../lib/route";
+import { pipelineForTask, specialistsForTask } from "../lib/route";
 import { AGENT_IDS, type AgentId, type PublicAgent, type PublicRun, type PublicState, type TaskRecord } from "../lib/types";
 import { Inspector } from "./inspector";
 import { Office, type TaskReadout } from "./office";
@@ -572,11 +572,11 @@ const TASK_HINTS = [
 const SLICE: Record<AgentId, string> = {
   leonard: "Plan",
   sheldon: "Structure",
-  penny: "Wording",
+  penny: "Product",
   howard: "Build",
   raj: "Debugging",
   amy: "Check",
-  bernadette: "Status",
+  bernadette: "Code",
 };
 
 type QueuePhase = "done" | "now" | "next" | "waiting" | "stopped";
@@ -602,6 +602,7 @@ function queueFor(state: PublicState | null): QueueStep[] {
     state.messages.filter((message) => message.taskId === task.id).map((message) => message.agentId),
   );
   const planned = pipelineForTask(task.text);
+  const pennyCloses = !specialistsForTask(task.text).includes("penny");
   const seen = new Set<string>(planned);
   const extras: AgentId[] = [];
   for (const id of [...runs.keys(), ...mentioned]) {
@@ -609,7 +610,9 @@ function queueFor(state: PublicState | null): QueueStep[] {
     seen.add(id);
     extras.push(id);
   }
-  const withCloser: AgentId[] = [...planned.filter((id) => id !== "bernadette"), ...extras, "bernadette"];
+  const withCloser: AgentId[] = pennyCloses
+    ? [...planned.filter((id) => id !== "penny"), ...extras, "penny"]
+    : [...planned, ...extras];
   const ids =
     task.status === "running"
       ? withCloser
@@ -628,7 +631,7 @@ function queueFor(state: PublicState | null): QueueStep[] {
       phase = "next";
       namedNext = true;
     } else phase = "waiting";
-    const slice = id === "bernadette" && index === ids.length - 1 ? "Conclusion" : SLICE[id];
+    const slice = id === "penny" && pennyCloses && index === ids.length - 1 ? "Conclusion" : SLICE[id];
     return [{ index: index + 1, agent, slice, phase, progress: stepProgress(phase, run) }];
   });
 }
@@ -694,11 +697,11 @@ function readoutFor(state: PublicState, names: Record<string, string>, nextStep:
       tone: "quiet",
       };
     }
-    const bernadette = state.runs.find((run) => run.agentId === "bernadette" && run.summary.trim());
+    const penny = state.runs.find((run) => run.agentId === "penny" && run.summary.trim());
     return {
       headline: "Last task",
       detail: latest.text,
-      conclusion: bernadette?.summary.trim() || nextStep,
+      conclusion: penny?.summary.trim() || nextStep,
       steps: [],
       tone: latest.status === "finished" ? "done" : "quiet",
     };
@@ -716,21 +719,21 @@ function readoutFor(state: PublicState, names: Record<string, string>, nextStep:
     };
   }
   if (task.status === "running") {
-    const bernadette = state.runs.find((run) => run.agentId === "bernadette" && run.summary.trim());
+    const penny = state.runs.find((run) => run.agentId === "penny" && run.summary.trim());
     return {
       headline: worker ? `${worker.name} is running this` : "The task is running",
       detail: task.text,
-      conclusion: bernadette?.summary.trim() || "Bernadette will explain what was done, and what to do next, when the others finish.",
+      conclusion: penny?.summary.trim() || "Penny will explain what was done, and what to do next, when the others finish.",
       steps: [],
       tone: "working",
     };
   }
   const finishedBy = notes.length ? notes.map((run) => names[run.agentId] ?? run.agentId).join(" and ") : "The team";
-  const bernadette = state.runs.find((run) => run.agentId === "bernadette" && run.summary.trim());
+  const penny = state.runs.find((run) => run.agentId === "penny" && run.summary.trim());
   return {
     headline: `Done. ${finishedBy} finished`,
     detail: task.text,
-    conclusion: bernadette?.summary.trim() || nextStep,
+    conclusion: penny?.summary.trim() || nextStep,
     steps: [],
       tone: "done",
   };

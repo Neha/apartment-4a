@@ -23,16 +23,17 @@ export function specialistsForTask(text: string): SpecialistId[] {
   }
 
   if (/\b(structure|architecture|design|outline)\b/.test(task)) add(order, "sheldon");
-  if (/\b(ux|requirement|wording|copy|user-facing)\b/.test(task)) add(order, "penny");
+  if (/\b(ux|requirement|wording|copy|user-facing|status|progress|schedule|tracker)\b/.test(task)) add(order, "penny");
   if (/\b(build|ci|deploy|script|pipeline)\b/.test(task)) add(order, "howard");
   if (/\b(bug|debug|log|crash|failing)\b/.test(task)) add(order, "raj");
   if (/\b(test|check|verify|missing|qa)\b/.test(task)) add(order, "amy");
-  if (/\b(status|progress|schedule|tracker)\b/.test(task)) add(order, "bernadette");
+  if (/\b(code|implement|refactor|feature|component|endpoint|function)\b/.test(task)) add(order, "bernadette");
   return order;
 }
 
-/** Leonard leads, specialists do the work, and Bernadette always closes in plain language. */
+/** Leonard leads. Specialists do the work. Penny closes when the task did not already include her. */
 export function pipelineForTask(text: string): AgentId[] {
-  const workers = specialistsForTask(text).filter((id) => id !== "bernadette");
-  return ["leonard", ...workers, "bernadette"];
+  const workers = specialistsForTask(text);
+  if (workers.includes("penny")) return ["leonard", ...workers];
+  return ["leonard", ...workers, "penny"];
 }
