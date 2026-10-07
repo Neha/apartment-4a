@@ -1,4 +1,4 @@
-import type { SpecialistId } from "./types";
+import type { AgentId, SpecialistId } from "./types";
 
 const MAX_SPECIALISTS = 3;
 
@@ -29,4 +29,10 @@ export function specialistsForTask(text: string): SpecialistId[] {
   if (/\b(test|check|verify|missing|qa)\b/.test(task)) add(order, "amy");
   if (/\b(status|progress|schedule|tracker)\b/.test(task)) add(order, "bernadette");
   return order;
+}
+
+/** Leonard leads, specialists do the work, and Bernadette always closes in plain language. */
+export function pipelineForTask(text: string): AgentId[] {
+  const workers = specialistsForTask(text).filter((id) => id !== "bernadette");
+  return ["leonard", ...workers, "bernadette"];
 }

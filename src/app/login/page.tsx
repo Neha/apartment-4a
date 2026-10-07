@@ -35,7 +35,7 @@ export default function LoginPage() {
         <img className="login-logo" src="/logo.svg" alt="" />
         <p className="login-brand">BazingaAI</p>
         <h1>Apartment 4A</h1>
-        <p className="login-copy">Sign in to open the room. The Cursor key stays on this machine.</p>
+        <p className="login-copy">Sign in to open the room.</p>
         <form className="settings" onSubmit={(event) => void submit(event)}>
           <label>
             Password

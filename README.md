@@ -18,12 +18,11 @@ Until `APP_PASSWORD` is set, the room stays closed. After you sign in, this brow
 
 1. Install and start the app (see [Run locally](#run-locally)).
 2. Sign in with the password you put in `.env.local`.
-3. Connect Cursor with an API key or the Integrations panel.
-4. In Settings, confirm the folder the agents may edit. The default is `workspace/`.
-5. Type one task in **Give your team a task** and choose **Assign Task**. Do not name who should do it.
-6. Watch **This task** on the left. It lists the lineup and who is working now.
-7. Select a person to read their short update on the right. **Read the full note** opens the longer write-up.
-8. When the task finishes, the lineup clears and everyone returns to idle. Sign out from the top-right corner when you are done.
+3. Connect Cursor with an API key or the Integrations panel. The team edits files in `workspace/` on the computer running the app.
+4. Type one task in **Give your team a task** and choose **Assign Task**. Do not name who should do it.
+5. Watch **This task** on the left. It lists the lineup and who is working now.
+6. Select a person to read their short update on the right. **Read the full note** opens the longer write-up.
+7. When the task finishes, the lineup clears and everyone returns to idle. Sign out from the top-right corner when you are done.
 
 Past tasks are under **Project** in the left panel. That list shows the last 8 tasks. The app keeps the last 40 in a local file. Nothing expires by time. The 41st task drops the oldest one the next time the file is saved.
 
@@ -97,7 +96,7 @@ This app stays on your computer. It is not a fit for Vercel. The agents need a l
 ## Best practices
 
 - Describe the outcome in the task. "Write a one-page status note" is enough. Naming Leonard or Penny in the prompt does not assign them.
-- Point Settings at the repository you want edited before you assign work. Agents can change files in that folder.
+- The team edits files on the computer where Apartment 4A is running, in `workspace/`. Run the app on your own computer when the files should stay with you.
 - Keep `APP_PASSWORD` and `CURSOR_API_KEY` in `.env.local`. That file is gitignored. Do not paste the password or the key into the README, issues, or chat logs.
 - Assign one task at a time. A second assignment is rejected while the team is busy.
 - Read a failure on the right panel before assigning the same task again. A stopped person stays blocked until the next assignment resets the team to idle.

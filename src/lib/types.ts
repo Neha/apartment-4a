@@ -40,6 +40,7 @@ export type TaskRecord = {
   text: string;
   status: TaskStatus;
   createdAt: string;
+  plan?: AgentId[];
 };
 
 export type RunRecord = {
@@ -61,6 +62,10 @@ export type MessageRecord = {
   agentId: AgentId;
   text: string;
   createdAt: string;
+};
+
+export type PublicMessage = MessageRecord & {
+  taskText: string;
 };
 
 export type AgentState = {
@@ -106,6 +111,7 @@ export type CredentialSource = "environment" | "login" | "none";
 
 export type PublicState = {
   project: { name: string; repoPath: string };
+  latestTask: Pick<TaskRecord, "id" | "text" | "status" | "createdAt"> | null;
   keyConfigured: boolean;
   credentialSource: CredentialSource;
   accountEmail: string | null;
@@ -116,6 +122,6 @@ export type PublicState = {
   agents: PublicAgent[];
   task: TaskRecord | null;
   runs: PublicRun[];
-  messages: MessageRecord[];
+  messages: PublicMessage[];
   recentTasks: Pick<TaskRecord, "id" | "text" | "status" | "createdAt">[];
 };

@@ -65,11 +65,11 @@ function normalize(raw: Partial<Store> | null): Store {
   for (const id of AGENT_IDS) {
     const saved = raw.agents?.[id];
     if (!saved) continue;
-    const status = saved.status === "working" ? "blocked" : saved.status;
+    const status = saved.status === "offline" ? "idle" : saved.status;
     agents[id] = {
       cursorAgentId: typeof saved.cursorAgentId === "string" ? saved.cursorAgentId : null,
-      status: status === "offline" ? "idle" : status,
-      activity: saved.status === "working" ? "Stopped when the app restarted" : saved.activity || "",
+      status: status === "working" || status === "blocked" || status === "done" || status === "idle" ? status : "idle",
+      activity: saved.activity || "",
     };
   }
   return {
@@ -85,13 +85,44 @@ function normalize(raw: Partial<Store> | null): Store {
   };
 }
 
+let recoveredThisProcess = false;
+
+/** A working agent only exists while this process is running the task. */
+function recoverInterruptedWork(store: Store): boolean {
+  let changed = false;
+  for (const id of AGENT_IDS) {
+    if (store.agents[id].status !== "working") continue;
+    store.agents[id].status = "blocked";
+    store.agents[id].activity = "Stopped when the app restarted";
+    changed = true;
+  }
+  for (const task of store.tasks) {
+    if (task.status !== "running") continue;
+    task.status = "error";
+    changed = true;
+  }
+  for (const run of store.runs) {
+    if (run.status !== "running") continue;
+    run.status = "error";
+    run.error = run.error ?? "Stopped when the app restarted";
+    changed = true;
+  }
+  return changed;
+}
+
 export function loadStore(): Store {
+  let store: Store;
   try {
     const raw = JSON.parse(fs.readFileSync(storeFile, "utf8")) as Partial<Store>;
-    return normalize(raw);
+    store = normalize(raw);
   } catch {
-    return freshStore();
+    store = freshStore();
   }
+  if (!recoveredThisProcess) {
+    recoveredThisProcess = true;
+    if (recoverInterruptedWork(store)) saveStore(store);
+  }
+  return store;
 }
 
 function saveStore(store: Store): void {
@@ -117,6 +148,22 @@ export function updateStore<T>(mutator: (store: Store) => T): Promise<T> {
   return job;
 }
 
+export function clearHistory(): Promise<{ ok: true } | { ok: false; error: string }> {
+  return updateStore((store) => {
+    if (isBusy() || store.tasks.some((task) => task.status === "running")) {
+      return { ok: false as const, error: "Wait until the current task finishes." };
+    }
+    store.tasks = [];
+    store.runs = [];
+    store.messages = [];
+    for (const id of AGENT_IDS) {
+      store.agents[id].status = "idle";
+      store.agents[id].activity = "";
+    }
+    return { ok: true as const };
+  });
+}
+
 export function toPublicState(
   store: Store,
   account: {
@@ -130,9 +177,13 @@ export function toPublicState(
 ): PublicState {
   const latest = store.tasks.at(-1) ?? null;
   const task = latest && latest.status !== "finished" ? latest : null;
-  const runs = task ? store.runs.filter((run) => run.taskId === task.id) : [];
+  const focusId = task?.id ?? latest?.id ?? null;
+  const runs = focusId ? store.runs.filter((run) => run.taskId === focusId) : [];
   return {
     project: store.project,
+    latestTask: latest
+      ? { id: latest.id, text: latest.text, status: latest.status, createdAt: latest.createdAt }
+      : null,
     keyConfigured: account.keyConfigured,
     credentialSource: account.credentialSource,
     accountEmail: account.email,
@@ -164,7 +215,10 @@ export function toPublicState(
       files: run.files,
       error: run.error,
     })),
-    messages: store.messages.slice(-30),
+    messages: store.messages.slice(-30).map((message) => ({
+      ...message,
+      taskText: store.tasks.find((item) => item.id === message.taskId)?.text ?? "Earlier task",
+    })),
     recentTasks: store.tasks.slice(-8).reverse().map((item) => ({
       id: item.id,
       text: item.text,

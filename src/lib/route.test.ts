@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { specialistsForTask } from "./route";
+import { pipelineForTask, specialistsForTask } from "./route";
 
 test("a status note brings structure, wording, and a check", () => {
   const text =
@@ -14,4 +14,9 @@ test("a question stays with the lead", () => {
 
 test("a failing build brings build and debugging", () => {
   assert.deepEqual(specialistsForTask("Fix the failing build and the error in the log"), ["howard", "raj"]);
+});
+
+test("Bernadette closes every task after the specialists", () => {
+  assert.deepEqual(pipelineForTask("Fix the failing build and the error in the log"), ["leonard", "howard", "raj", "bernadette"]);
+  assert.deepEqual(pipelineForTask("Add the missing tests"), ["leonard", "amy", "bernadette"]);
 });

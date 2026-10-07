@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import { isBusy, updateStore } from "../../../lib/store";
 
 export const dynamic = "force-dynamic";
@@ -13,25 +11,15 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const body = (await request.json().catch(() => null)) as { name?: unknown; repoPath?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { name?: unknown } | null;
   const name = typeof body?.name === "string" ? body.name.trim() : undefined;
-  const repoPath = typeof body?.repoPath === "string" ? body.repoPath.trim() : undefined;
 
   if (name !== undefined && (name.length === 0 || name.length > 60)) {
     return Response.json({ error: "Use a project name under 60 characters." }, { status: 400 });
   }
 
-  let resolved: string | undefined;
-  if (repoPath !== undefined) {
-    resolved = path.resolve(repoPath);
-    if (!fs.existsSync(resolved) || !fs.statSync(resolved).isDirectory()) {
-      return Response.json({ error: "That folder does not exist." }, { status: 400 });
-    }
-  }
-
   await updateStore((store) => {
     if (name) store.project.name = name;
-    if (resolved) store.project.repoPath = resolved;
   });
 
   return Response.json({ ok: true });
