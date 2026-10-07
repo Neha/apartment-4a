@@ -1,0 +1,3 @@
+This folder is the default place agents edit.
+
+Point Settings at another folder if the team should work in a different project.
