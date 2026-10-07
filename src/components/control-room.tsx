@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { specialistsForTask } from "../lib/route";
-import type { AgentId, PublicAgent, PublicRun, PublicState, TaskRecord } from "../lib/types";
+import { pipelineForTask } from "../lib/route";
+import { AGENT_IDS, type AgentId, type PublicAgent, type PublicRun, type PublicState, type TaskRecord } from "../lib/types";
 import { Inspector } from "./inspector";
 import { Office, type TaskReadout } from "./office";
 import { PixelHead } from "./pixel-head";
 
-type View = "room" | "project" | "integrations" | "settings";
+type View = "room" | "project" | "integrations";
 
 const STAR_WARS_NAMES = [
   "Luke Skywalker",
@@ -53,11 +53,13 @@ export function ControlRoom() {
   const [selected, setSelected] = useState("leonard");
   const [view, setView] = useState<View>("room");
   const [draft, setDraft] = useState("");
+  const [taskFieldReady, setTaskFieldReady] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [clock, setClock] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [repoPath, setRepoPath] = useState("");
   const [welcomeName, setWelcomeName] = useState("");
 
   const refresh = useCallback(async () => {
@@ -114,7 +116,7 @@ export function ControlRoom() {
 
   const selectedAgent = state?.agents.find((agent) => agent.id === selected) ?? state?.agents[0];
   const selectedRun = state?.runs.find((run) => run.agentId === selectedAgent?.id);
-  const online = state?.agents.filter((agent) => agent.status !== "offline").length ?? 0;
+  const team = teamSummary(state?.agents);
   const queue = queueFor(state);
   const nextStep = nextStepFor(state, queue);
 
@@ -142,6 +144,23 @@ export function ControlRoom() {
     }
   }
 
+  async function clearHistory() {
+    setHistoryError(null);
+    setClearing(true);
+    try {
+      const response = await fetch("/api/tasks", { method: "DELETE" });
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setHistoryError(body?.error ?? "History could not be cleared.");
+        return;
+      }
+      setConfirmClear(false);
+      await refresh();
+    } finally {
+      setClearing(false);
+    }
+  }
+
   async function signOut() {
     await fetch("/api/logout", { method: "POST" });
     window.location.assign("/login");
@@ -152,29 +171,6 @@ export function ControlRoom() {
     const response = await fetch("/api/connect", { method: "POST" });
     if (!response.ok) setFormError("Cursor login could not start.");
     await refresh();
-  }
-
-  function openSettings() {
-    setProjectName(state?.project.name ?? "");
-    setRepoPath(state?.project.repoPath ?? "");
-    setView("settings");
-  }
-
-  async function saveProject(event: FormEvent) {
-    event.preventDefault();
-    setFormError(null);
-    const response = await fetch("/api/project", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: projectName, repoPath }),
-    });
-    const body = (await response.json().catch(() => null)) as { error?: string } | null;
-    if (!response.ok) {
-      setFormError(body?.error ?? "The project could not be saved.");
-      return;
-    }
-    await refresh();
-    setView("room");
   }
 
   return (
@@ -194,14 +190,11 @@ export function ControlRoom() {
           <button type="button" className={view === "project" ? "top-link top-link-on" : "top-link"} onClick={() => setView("project")}>
             Tasks
           </button>
-          <button type="button" className={view === "settings" ? "top-link top-link-on" : "top-link"} onClick={openSettings}>
-            Settings
-          </button>
         </nav>
         <div className="top-meta">
-          <span className="online-count">
-            <i className={online > 0 ? "dot dot-on" : "dot"} />
-            {online}/{state?.agents.length ?? 7} online
+          <span className="online-count" title={team.title}>
+            <i className={team.dotClass} />
+            {team.text}
           </span>
           <time>{clock}</time>
           {welcomeName ? <p className="welcome">Welcome, {welcomeName}</p> : null}
@@ -214,41 +207,21 @@ export function ControlRoom() {
       <div className="body">
         <aside className="sidebar">
           <section className="queue" aria-label="Task queue">
-            <div className="side-label">
-              <h2>This task</h2>
-              <span>{queue.filter((step) => step.phase === "done").length}/{queue.length || 0}</span>
-            </div>
-            {state?.task ? <p className="queue-task">{state.task.text}</p> : <p className="queue-task">No task yet.</p>}
-            {queue.length === 0 ? <p className="queue-empty">Assign a task and the lineup appears here.</p> : null}
-            <ol className="queue-list">
-              {queue.map((step) => (
-                <li key={step.agent.id}>
-                  <button
-                    type="button"
-                    className={step.agent.id === selectedAgent?.id ? `queue-row queue-${step.phase} selected` : `queue-row queue-${step.phase}`}
-                    onClick={() => {
-                      setSelected(step.agent.id);
-                      setView("room");
-                    }}
-                  >
-                    <span className="queue-index">{step.index}</span>
-                    <PixelHead id={step.agent.id} />
-                    <span>
-                      <strong>{step.agent.name}</strong>
-                      <small>{step.slice}</small>
-                    </span>
-                    <em className={`queue-phase queue-phase-${step.phase}`}>{phaseLabel(step.phase)}</em>
-                  </button>
-                </li>
-              ))}
-            </ol>
-            <p className="queue-next">{nextStep}</p>
+            <TaskPanel
+              state={state}
+              queue={queue}
+              selectedId={selectedAgent?.id}
+              nextStep={nextStep}
+              onHistory={() => setView("project")}
+              onSelect={(id) => {
+                setSelected(id);
+                setView("room");
+              }}
+            />
           </section>
           <div className="side-label">
             <h2>AI Team</h2>
-            <span>
-              {online}/{state?.agents.length ?? 7} online
-            </span>
+            <span title={team.title}>{team.text}</span>
           </div>
           <ul className="roster">
             {(state?.agents ?? []).map((agent) => (
@@ -278,9 +251,6 @@ export function ControlRoom() {
             <button type="button" onClick={() => setView("integrations")}>
               Integrations
             </button>
-            <button type="button" onClick={openSettings}>
-              Settings
-            </button>
           </nav>
           <p className="side-foot">
             <span className="side-foot-links">
@@ -305,24 +275,63 @@ export function ControlRoom() {
             <Office
               agents={state.agents}
               selectedId={selectedAgent?.id ?? "leonard"}
-              readout={readoutFor(state, names, nextStep)}
+              readout={{
+                ...readoutFor(state, names, nextStep),
+                steps: queue.map((step) => ({
+                  id: step.agent.id,
+                  name: step.agent.name,
+                  phase: step.phase,
+                  progress: step.progress,
+                })),
+              }}
               onSelect={(id) => setSelected(id)}
             />
           ) : null}
           {state && view === "project" ? (
             <section className="panel">
               <h2>{state.project.name}</h2>
-              <p className="muted">Agents edit this folder. One writer runs at a time, in the order shown under This task.</p>
-              <p className="path">{state.project.repoPath}</p>
-              <h3>Recent tasks</h3>
-              {state.recentTasks.length === 0 ? <p className="muted">No tasks yet.</p> : null}
+              <div className="history-head">
+                <h3>Recent tasks</h3>
+                {confirmClear ? (
+                  <div className="history-confirm">
+                    <button type="button" className="clear-history" disabled={clearing} onClick={() => void clearHistory()}>
+                      {clearing ? "Clearing…" : "Clear"}
+                    </button>
+                    <button type="button" className="history-cancel" disabled={clearing} onClick={() => setConfirmClear(false)}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="clear-history"
+                    disabled={state.recentTasks.length === 0 || state.busy}
+                    onClick={() => {
+                      setHistoryError(null);
+                      setConfirmClear(true);
+                    }}
+                  >
+                    Clear history
+                  </button>
+                )}
+              </div>
+              <p className="muted">
+                {confirmClear
+                  ? "This removes every saved task and the discussion. The team stays connected."
+                  : "This list shows the latest 8 tasks. The app keeps the latest 40. Nothing expires by date or time. When a 41st task is saved, the oldest one is dropped."}
+              </p>
+              {historyError ? <p className="form-error">{historyError}</p> : null}
+              {state.recentTasks.length === 0 ? <p className="muted">No tasks yet. A first task will show up here with the date and time it was assigned.</p> : null}
               <ul className="task-list">
                 {state.recentTasks.map((task) => (
                   <li key={task.id}>
                     <span className={`status-pill status-${task.status === "running" ? "working" : task.status === "error" ? "blocked" : "done"}`}>
                       {task.status}
                     </span>
-                    {task.text}
+                    <span>
+                      <span className="task-line">{task.text}</span>
+                      <time dateTime={task.createdAt}>{formatWhen(task.createdAt)}</time>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -353,34 +362,20 @@ export function ControlRoom() {
               </button>
             </section>
           ) : null}
-          {state && view === "settings" ? (
-            <section className="panel">
-              <h2>Settings</h2>
-              <form className="settings" onSubmit={(event) => void saveProject(event)}>
-                <label>
-                  Project name
-                  <input value={projectName} onChange={(event) => setProjectName(event.target.value)} maxLength={60} />
-                </label>
-                <label>
-                  Folder the agents edit
-                  <input value={repoPath} onChange={(event) => setRepoPath(event.target.value)} spellCheck={false} />
-                </label>
-                <button type="submit" className="primary" disabled={state.busy}>
-                  Save
-                </button>
-              </form>
-            </section>
-          ) : null}
-          <form className="composer" onSubmit={(event) => void assign(event)}>
+          <form className="composer" autoComplete="off" onSubmit={(event) => void assign(event)}>
             <p className="composer-label">
               <span aria-hidden="true">◆</span> Give your team a task...
             </p>
             <div className="composer-row">
-              <label className="sr-only" htmlFor="task">
+              <label className="sr-only" htmlFor="apartment-task">
                 Give your team a task
               </label>
               <input
-                id="task"
+                id="apartment-task"
+                name="apartment-task"
+                autoComplete="off"
+                readOnly={!taskFieldReady}
+                onFocus={() => setTaskFieldReady(true)}
                 value={draft}
                 placeholder="e.g. Review PR #128, fix CI, and missing tests..."
                 onChange={(event) => setDraft(event.target.value)}
@@ -410,7 +405,7 @@ export function ControlRoom() {
         {state ? (
           <Inspector
             agent={selectedAgent}
-            task={state.task}
+            task={state.task ?? state.latestTask}
             run={selectedRun}
             messages={state.messages}
             names={names}
@@ -420,6 +415,150 @@ export function ControlRoom() {
         )}
       </div>
     </div>
+  );
+}
+
+function formatWhen(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function TaskPanel({
+  state,
+  queue,
+  selectedId,
+  nextStep,
+  onHistory,
+  onSelect,
+}: {
+  state: PublicState | null;
+  queue: QueueStep[];
+  selectedId: string | undefined;
+  nextStep: string;
+  onHistory: () => void;
+  onSelect: (id: AgentId) => void;
+}) {
+  const latest = state?.latestTask ?? null;
+
+  if (!state?.task && !latest) {
+    return (
+      <>
+        <div className="side-label">
+          <h2>Start here</h2>
+        </div>
+        <p className="queue-task">No task yet.</p>
+        <p className="queue-empty">Type one below.</p>
+      </>
+    );
+  }
+
+  if (!state?.task && latest) {
+    return (
+      <>
+        <div className="side-label">
+          <h2 className="with-icon">
+            <LastTaskIcon />
+            Last task
+          </h2>
+        </div>
+        <p className="queue-task" title={latest.text}>{latest.text}</p>
+        <p className="queue-empty">{formatWhen(latest.createdAt)}</p>
+        {queue.length > 0 ? (
+          <ol className="queue-list">
+            {queue.map((step) => (
+              <li key={step.agent.id}>
+                <button
+                  type="button"
+                  className={step.agent.id === selectedId ? `queue-row queue-${step.phase} selected` : `queue-row queue-${step.phase}`}
+                  onClick={() => onSelect(step.agent.id)}
+                >
+                  <span className="queue-index">{step.index}</span>
+                  <PixelHead id={step.agent.id} />
+                  <span>
+                    <strong>{step.agent.name}</strong>
+                    <small>{step.slice}</small>
+                  </span>
+                  <em className={`queue-phase queue-phase-${step.phase}`}>{phaseLabel(step.phase)}</em>
+                </button>
+              </li>
+            ))}
+          </ol>
+        ) : null}
+        <p className="queue-next">{nextStep}</p>
+        <button type="button" className="queue-history" onClick={onHistory}>
+          Task history
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="side-label">
+        <h2>In progress</h2>
+        <span>{queue.filter((step) => step.phase === "done").length}/{queue.length || 0}</span>
+      </div>
+      <p className="queue-task">{state?.task?.text}</p>
+      <ol className="queue-list">
+        {queue.map((step) => (
+          <li key={step.agent.id}>
+            <button
+              type="button"
+              className={step.agent.id === selectedId ? `queue-row queue-${step.phase} selected` : `queue-row queue-${step.phase}`}
+              onClick={() => onSelect(step.agent.id)}
+            >
+              <span className="queue-index">{step.index}</span>
+              <PixelHead id={step.agent.id} />
+              <span>
+                <strong>{step.agent.name}</strong>
+                <small>{step.slice}</small>
+              </span>
+              <em className={`queue-phase queue-phase-${step.phase}`}>{phaseLabel(step.phase)}</em>
+            </button>
+          </li>
+        ))}
+      </ol>
+      <p className="queue-next">{nextStep}</p>
+    </>
+  );
+}
+
+function teamSummary(agents: PublicAgent[] | undefined): { text: string; dotClass: string; title: string } {
+  const list = agents ?? [];
+  const total = list.length;
+  if (total === 0) return { text: "0 connected", dotClass: "dot", title: "Not connected" };
+  let idle = 0;
+  let working = 0;
+  let blocked = 0;
+  let done = 0;
+  let offline = 0;
+  for (const agent of list) {
+    if (agent.status === "working") working += 1;
+    else if (agent.status === "blocked") blocked += 1;
+    else if (agent.status === "done") done += 1;
+    else if (agent.status === "offline") offline += 1;
+    else idle += 1;
+  }
+  if (offline === total) return { text: `0/${total} connected`, dotClass: "dot", title: "Cursor is not connected" };
+  if (working > 0) return { text: `${working} working`, dotClass: "dot dot-working", title: `${working} working, ${idle} idle` };
+  if (blocked > 0) return { text: `${blocked} blocked`, dotClass: "dot dot-blocked", title: `${blocked} blocked` };
+  if (idle === total) return { text: `${total} idle`, dotClass: "dot dot-idle", title: "Connected, waiting for a task" };
+  if (done > 0 && idle === 0 && offline === 0) return { text: `${done} done`, dotClass: "dot dot-done", title: "Finished" };
+  return { text: `${total - offline}/${total} idle`, dotClass: "dot dot-idle", title: "Connected and idle" };
+}
+
+function LastTaskIcon() {
+  return (
+    <svg className="section-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M5.2 8.2 7 10l3.8-4" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -447,30 +586,60 @@ type QueueStep = {
   agent: PublicAgent;
   slice: string;
   phase: QueuePhase;
+  progress: number;
 };
 
+function isAgentId(id: string): id is AgentId {
+  return (AGENT_IDS as readonly string[]).includes(id);
+}
+
 function queueFor(state: PublicState | null): QueueStep[] {
-  const task = state?.task;
+  const task = state?.task ?? state?.latestTask ?? null;
   if (!state || !task) return [];
   const runs = new Map<string, PublicRun>();
   for (const run of state.runs) runs.set(run.agentId, run);
-  const planned: AgentId[] = ["leonard", ...specialistsForTask(task.text)];
-  const ids = task.status === "running" ? planned : planned.filter((id) => runs.has(id));
+  const mentioned = new Set(
+    state.messages.filter((message) => message.taskId === task.id).map((message) => message.agentId),
+  );
+  const planned = pipelineForTask(task.text);
+  const seen = new Set<string>(planned);
+  const extras: AgentId[] = [];
+  for (const id of [...runs.keys(), ...mentioned]) {
+    if (seen.has(id) || !isAgentId(id)) continue;
+    seen.add(id);
+    extras.push(id);
+  }
+  const withCloser: AgentId[] = [...planned.filter((id) => id !== "bernadette"), ...extras, "bernadette"];
+  const ids =
+    task.status === "running"
+      ? withCloser
+      : withCloser.filter((id) => runs.has(id) || mentioned.has(id));
   let namedNext = false;
   return ids.flatMap((id, index) => {
     const agent = state.agents.find((item) => item.id === id);
     if (!agent) return [];
     const run = runs.get(id);
     let phase: QueuePhase;
-    if (run?.status === "error" || agent.status === "blocked") phase = "stopped";
-    else if (run?.status === "finished") phase = "done";
+    if (run?.status === "error") phase = "stopped";
+    else if (agent.status === "blocked" && run?.status !== "finished") phase = "stopped";
+    else if (run?.status === "finished" || (task.status !== "running" && mentioned.has(id))) phase = "done";
     else if (agent.status === "working" || run?.status === "running") phase = "now";
     else if (!namedNext) {
       phase = "next";
       namedNext = true;
     } else phase = "waiting";
-    return [{ index: index + 1, agent, slice: SLICE[id], phase }];
+    const slice = id === "bernadette" && index === ids.length - 1 ? "Conclusion" : SLICE[id];
+    return [{ index: index + 1, agent, slice, phase, progress: stepProgress(phase, run) }];
   });
+}
+
+function stepProgress(phase: QueuePhase, run: PublicRun | undefined): number {
+  if (phase === "done" || phase === "stopped") return 1;
+  if (phase !== "now") return 0;
+  const items = run?.checklist ?? [];
+  const finished = items.filter((item) => item.state === "done").length;
+  if (items.length === 0) return 0.45;
+  return Math.max(0.2, Math.min(0.9, finished / items.length));
 }
 
 function phaseLabel(phase: QueuePhase): string {
@@ -483,7 +652,20 @@ function phaseLabel(phase: QueuePhase): string {
 
 function nextStepFor(state: PublicState | null, steps: QueueStep[]): string {
   const task: TaskRecord | null = state?.task ?? null;
-  if (!task) return "Assign a task below. You do not name anyone. The wording decides who works.";
+  if (!task && !state?.latestTask) return "Type the first task below. You do not name anyone. The wording decides who works.";
+  if (!task) {
+    const done = steps.filter((step) => step.phase === "done");
+    const last = done.at(-1);
+    const summary = last
+      ? [...(state?.runs ?? [])].reverse().find((run) => run.agentId === last.agent.id && run.summary.trim())?.summary.trim()
+      : "";
+    if (summary) return summary;
+    if (done.length > 1) {
+      return `${done[0].agent.name} handed this to ${done.slice(1).map((step) => step.agent.name).join(", then ")}.`;
+    }
+    if (done.length === 1) return `${done[0].agent.name} finished this task.`;
+    return "Assign the next task below. Earlier tasks stay under Tasks.";
+  }
   const now = steps.find((step) => step.phase === "now");
   const next = steps.find((step) => step.phase === "next");
   const stopped = steps.find((step) => step.phase === "stopped");
@@ -502,11 +684,23 @@ function nextStepFor(state: PublicState | null, steps: QueueStep[]): string {
 function readoutFor(state: PublicState, names: Record<string, string>, nextStep: string): TaskReadout {
   const task = state.task;
   if (!task) {
-    return {
-      headline: "Nobody is running a task",
-      detail: "Assign a task and the lineup appears on the left.",
-      conclusion: nextStep,
+    const latest = state.latestTask;
+    if (!latest) {
+      return {
+        headline: "Welcome in",
+        detail: "No task yet. Type the first one below.",
+        conclusion: nextStep,
+        steps: [],
       tone: "quiet",
+      };
+    }
+    const bernadette = state.runs.find((run) => run.agentId === "bernadette" && run.summary.trim());
+    return {
+      headline: "Last task",
+      detail: latest.text,
+      conclusion: bernadette?.summary.trim() || nextStep,
+      steps: [],
+      tone: latest.status === "finished" ? "done" : "quiet",
     };
   }
   const notes = state.runs.filter((run) => run.status === "finished");
@@ -517,23 +711,28 @@ function readoutFor(state: PublicState, names: Record<string, string>, nextStep:
       headline: blocked ? `${blocked.name} stopped` : "The task stopped",
       detail: task.text,
       conclusion: nextStep,
+      steps: [],
       tone: "error",
     };
   }
   if (task.status === "running") {
+    const bernadette = state.runs.find((run) => run.agentId === "bernadette" && run.summary.trim());
     return {
       headline: worker ? `${worker.name} is running this` : "The task is running",
       detail: task.text,
-      conclusion: nextStep,
+      conclusion: bernadette?.summary.trim() || "Bernadette will explain what was done, and what to do next, when the others finish.",
+      steps: [],
       tone: "working",
     };
   }
   const finishedBy = notes.length ? notes.map((run) => names[run.agentId] ?? run.agentId).join(" and ") : "The team";
+  const bernadette = state.runs.find((run) => run.agentId === "bernadette" && run.summary.trim());
   return {
     headline: `Done. ${finishedBy} finished`,
     detail: task.text,
-    conclusion: nextStep,
-    tone: "done",
+    conclusion: bernadette?.summary.trim() || nextStep,
+    steps: [],
+      tone: "done",
   };
 }
 

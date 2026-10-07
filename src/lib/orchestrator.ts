@@ -6,7 +6,7 @@ import { applyEvent, type KnownEvent, type RunDraft } from "./events";
 import { parseHandoff, type Handoff } from "./handoff";
 import { publish } from "./hub";
 import { rosterEntry } from "./roster";
-import { specialistsForTask } from "./route";
+import { pipelineForTask } from "./route";
 import { isBusy, loadStore, setBusy, updateStore } from "./store";
 import { AGENT_IDS, type AgentId, type RunRecord } from "./types";
 
@@ -75,7 +75,30 @@ async function dispose(agent: SDKAgent | null): Promise<void> {
   await agent[Symbol.asyncDispose]();
 }
 
-async function runAgent(taskId: string, agentId: AgentId, prompt: string, repoPath: string): Promise<RunOutcome> {
+async function ensureRun(taskId: string, agentId: AgentId, activity: string): Promise<void> {
+  await updateStore((store) => {
+    store.agents[agentId].status = "working";
+    store.agents[agentId].activity = activity;
+    if (!latestRun(store, taskId, agentId)) {
+      store.runs.push(emptyRun(crypto.randomUUID(), taskId, agentId));
+    }
+  });
+}
+
+function handoffNote(summary: string, nextId: AgentId | null): string {
+  const text = summary.trim();
+  if (!nextId) return text;
+  const name = rosterEntry(nextId).name;
+  return text ? `Handed this to ${name}. ${text}` : `Handed this to ${name}.`;
+}
+
+async function runAgent(
+  taskId: string,
+  agentId: AgentId,
+  prompt: string,
+  repoPath: string,
+  nextId: AgentId | null,
+): Promise<RunOutcome> {
   const savedId = loadStore().agents[agentId].cursorAgentId;
   let handle: SDKAgent | null = null;
   let active: Awaited<ReturnType<SDKAgent["send"]>> | null = null;
@@ -135,19 +158,15 @@ async function runAgent(taskId: string, agentId: AgentId, prompt: string, repoPa
       }
       store.agents[agentId].status = failed ? "blocked" : "idle";
       store.agents[agentId].activity = failed ? (failure ?? "Blocked").slice(0, 90) : "";
-      if (handoff.summary) {
+      const note = handoffNote(handoff.summary, !failed ? (nextId ?? handoff.agentId) : null);
+      if (note) {
         store.messages.push({
           id: crypto.randomUUID(),
           taskId,
           agentId,
-          text: handoff.summary,
+          text: note,
           createdAt: new Date().toISOString(),
         });
-      }
-      if (!failed && handoff.agentId) {
-        store.agents[handoff.agentId].status = "working";
-        store.agents[handoff.agentId].activity = "Picking up the handoff";
-        store.runs.push(emptyRun(crypto.randomUUID(), taskId, handoff.agentId));
       }
     });
 
@@ -181,28 +200,62 @@ async function markTask(taskId: string, status: "finished" | "error"): Promise<v
 
 async function runPipeline(taskId: string, taskText: string, repoPath: string): Promise<void> {
   try {
-    const specialists = specialistsForTask(taskText);
+    const specialists = pipelineForTask(taskText).filter((id) => id !== "leonard" && id !== "bernadette");
     const teamLine =
       specialists.length > 0
-        ? `The server will run these teammates after you, in order: ${specialists.join(", ")}. Write the plan only. Do not produce the final deliverable.`
-        : "No teammate is queued. Finish this task yourself.";
+        ? `The server will run these teammates after you, in order: ${specialists.join(", ")}. Bernadette explains the result to the user after that. Write the plan only. Do not produce the final deliverable.`
+        : "Do this task yourself. Bernadette explains the result to the user afterwards.";
     const leadPrompt = `${rosterEntry("leonard").prompt}\n\n${teamLine}\n\nTask:\n${taskText}`;
-    const lead = await runAgent(taskId, "leonard", leadPrompt, repoPath);
+    const follow = [...specialists];
+    const lead = await runAgent(taskId, "leonard", leadPrompt, repoPath, specialists[0] ?? "bernadette");
     if (!lead.ok) {
       await markTask(taskId, "error");
       return;
     }
+    if (lead.handoff.agentId && lead.handoff.agentId !== "bernadette" && !follow.includes(lead.handoff.agentId)) {
+      follow.push(lead.handoff.agentId);
+    }
 
     let notes = lead.handoff.summary;
-    for (const specialistId of specialists) {
+    for (let index = 0; index < follow.length; index += 1) {
+      const specialistId = follow[index];
+      const nextId = follow[index + 1] ?? "bernadette";
+      await ensureRun(taskId, specialistId, "Picking up the handoff");
       const specialist = rosterEntry(specialistId);
       const prompt = `${specialist.prompt}\n\nOriginal task:\n${taskText}\n\nNotes so far:\n${notes || "Leonard finished the plan."}`;
-      const followUp = await runAgent(taskId, specialistId, prompt, repoPath);
+      const followUp = await runAgent(taskId, specialistId, prompt, repoPath, nextId);
       if (!followUp.ok) {
         await markTask(taskId, "error");
         return;
       }
       if (followUp.handoff.summary) notes = `${notes}\n${followUp.handoff.summary}`.trim();
+    }
+    await ensureRun(taskId, "bernadette", "Writing the conclusion");
+    const closing = await runAgent(
+      taskId,
+      "bernadette",
+      `You are Bernadette, the project manager. The team finished a task. Do not change files. Tell the user what happened, in everyday language.
+
+Write two or three short sentences: what they asked for, what the team actually did, and the next step. No jargon and no code.
+
+Original task:
+${taskText}
+
+Notes from the team:
+${notes || "The team finished without extra notes."}
+
+End your reply with a trailer in exactly this shape, and write nothing after it:
+
+---
+SUMMARY: the same conclusion in two sentences a person can act on
+
+Do not hand this task to anyone else.`,
+      repoPath,
+      null,
+    );
+    if (!closing.ok) {
+      await markTask(taskId, "error");
+      return;
     }
     await markTask(taskId, "finished");
   } catch (error) {
@@ -239,7 +292,7 @@ export async function assignTask(text: string): Promise<{ ok: true } | { ok: fal
 
   const repoPath = loadStore().project.repoPath;
   if (!fs.existsSync(repoPath) || !fs.statSync(repoPath).isDirectory()) {
-    return { ok: false, status: 400, error: "The project folder does not exist. Choose it in Settings." };
+    return { ok: false, status: 400, error: "The project folder on this computer does not exist." };
   }
 
   const taskId = crypto.randomUUID();

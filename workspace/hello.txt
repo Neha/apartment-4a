@@ -1,3 +1,5 @@
 This folder is the default place agents edit.
 
-Point Settings at another folder if the team should work in a different project.
+Agentic AI LMS lives in agentic-ai-lms/ — run: python3 -m http.server 8000 from that folder.
+
+Point Settings at agentic-ai-lms/ (or another folder) if the team should focus there.
