@@ -2,7 +2,7 @@
 
 A local control room for a team of Cursor agents. You assign one task. The app reads the wording, lines up the people who should work, and runs one writer at a time in a folder on your machine.
 
-<video src="demo/apartment-4a-x-linkedin.mp4" controls width="100%"></video>
+<video src="docs/apartment-4a-x-linkedin.mp4" controls width="100%"></video>
 
 ![Sign in to Apartment 4A](docs/login.png)
 
