@@ -36,3 +36,13 @@ jobs:
             ${{ steps.meta.outputs.image }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
+      # Optional: tell the homelab deploy repo a new image exists so it can roll it out.
+      # Skipped unless the PLATFORM_DEPLOY_TOKEN secret is set.
+      - name: Notify deploy repo
+        env:
+          GH_TOKEN: ${{ secrets.PLATFORM_DEPLOY_TOKEN }}
+        if: env.GH_TOKEN != ''
+        run: |
+          gh api repos/jaswantsandhu/platform-deploy/dispatches \
+            -f event_type=apartment-4a-image \
+            -f "client_payload[tag]=sha-${{ steps.meta.outputs.short }}"
