@@ -5,6 +5,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const [store, account] = await Promise.all([Promise.resolve(loadStore()), accountStatus()]);
+  const [store, account] = await Promise.all([loadStore(), accountStatus()]);
   return Response.json(toPublicState(store, account));
 }

@@ -24,7 +24,7 @@ Until `APP_PASSWORD` is set, the room stays closed. After you sign in, this brow
 6. Select a person to read their short update on the right. **Read the full note** opens the longer write-up.
 7. When the task finishes, the lineup clears and everyone returns to idle. Sign out from the top-right corner when you are done.
 
-Past tasks are under **Project** in the left panel. That list shows the last 8 tasks. The app keeps the last 40 in a local file. Nothing expires by time. The 41st task drops the oldest one the next time the file is saved.
+Past tasks are under **Tasks**. That list shows the last 8 tasks. The app keeps the last 40. Nothing expires by time. The 41st task drops the oldest one the next time the record is saved. On your computer that record is `data/store.json`. On a server, set `DATABASE_URL` and the same record lives in Postgres.
 
 ## How the team is chosen
 
@@ -81,7 +81,9 @@ npm test
 npm run typecheck
 ```
 
-This app stays on your computer. It is not a fit for Vercel. The agents need a long-running process, a real project folder, and a local data file.
+This app needs a long-running process. It is not a fit for Vercel. Agents edit files in `workspace/` on the machine running the app.
+
+To host it, set `DATABASE_URL` to a Postgres database. Tasks, discussion, agent status, every file path the team touches, and a log of those steps stay there across deploys. People using the site do not manage a data file. The team still writes project files in `workspace/` on the server. Mount that folder if those files should remain after a new container. The database keeps the path of each file, not a copy of the file.
 
 ## Code guidelines
 
@@ -90,7 +92,7 @@ This app stays on your computer. It is not a fit for Vercel. The agents need a l
 - Role prompts live in `src/lib/roster.ts`. Who runs for a task lives in `src/lib/route.ts`. Add a test in `src/lib/route.test.ts` when you change the wording rules.
 - The screen is `src/components`. Pages are `src/app`. HTTP routes are `src/app/api`.
 - Shared types live in `src/lib/types.ts`. Do not duplicate status names in components.
-- Store updates go through `updateStore`. It writes the JSON file atomically. Do not edit `data/store.json` by hand while a task is running.
+- Store updates go through `updateStore`. With `DATABASE_URL` it writes one Postgres row. Without it, it writes `data/store.json` atomically. Do not edit that file by hand while a task is running.
 - Tests use Node's test runner (`node:test`) and `tsx`. Prefer a small pure function and a unit test over a new dependency.
 
 ## Best practices

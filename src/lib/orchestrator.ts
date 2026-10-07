@@ -99,7 +99,7 @@ async function runAgent(
   repoPath: string,
   nextId: AgentId | null,
 ): Promise<RunOutcome> {
-  const savedId = loadStore().agents[agentId].cursorAgentId;
+  const savedId = (await loadStore()).agents[agentId].cursorAgentId;
   let handle: SDKAgent | null = null;
   let active: Awaited<ReturnType<SDKAgent["send"]>> | null = null;
   try {
@@ -290,7 +290,7 @@ export async function assignTask(text: string): Promise<{ ok: true } | { ok: fal
     };
   }
 
-  const repoPath = loadStore().project.repoPath;
+  const repoPath = (await loadStore()).project.repoPath;
   if (!fs.existsSync(repoPath) || !fs.statSync(repoPath).isDirectory()) {
     return { ok: false, status: 400, error: "The project folder on this computer does not exist." };
   }
