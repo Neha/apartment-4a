@@ -1,6 +1,7 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
+import { databaseUrl, readStateDocument, writeStateDocument } from "./db";
 import { publish } from "./hub";
 import { ROSTER } from "./roster";
 import { visibleThought } from "./handoff";
@@ -110,22 +111,52 @@ function recoverInterruptedWork(store: Store): boolean {
   return changed;
 }
 
-export function loadStore(): Store {
-  let store: Store;
+let opening: Promise<void> | null = null;
+
+function readFileStore(): Store {
   try {
     const raw = JSON.parse(fs.readFileSync(storeFile, "utf8")) as Partial<Store>;
-    store = normalize(raw);
+    return normalize(raw);
   } catch {
-    store = freshStore();
+    return freshStore();
   }
-  if (!recoveredThisProcess) {
-    recoveredThisProcess = true;
-    if (recoverInterruptedWork(store)) saveStore(store);
-  }
-  return store;
 }
 
-function saveStore(store: Store): void {
+async function readPersistedStore(): Promise<Store> {
+  if (!databaseUrl()) return readFileStore();
+  const saved = await readStateDocument();
+  if (saved) return normalize(saved);
+  const seeded = readFileStore();
+  await writeStateDocument(seeded, null);
+  return seeded;
+}
+
+function ensureOpen(): Promise<void> {
+  if (recoveredThisProcess) return Promise.resolve();
+  if (!opening) {
+    opening = (async () => {
+      const store = await readPersistedStore();
+      const before = structuredClone(store);
+      if (recoverInterruptedWork(store)) await saveStore(store, before);
+      recoveredThisProcess = true;
+    })().catch((error: unknown) => {
+      opening = null;
+      throw error;
+    });
+  }
+  return opening;
+}
+
+export async function loadStore(): Promise<Store> {
+  await ensureOpen();
+  return readPersistedStore();
+}
+
+async function saveStore(store: Store, before: Store | null = null): Promise<void> {
+  if (databaseUrl()) {
+    await writeStateDocument(store, before);
+    return;
+  }
   fs.mkdirSync(dataDir, { recursive: true });
   const temp = `${storeFile}.tmp`;
   fs.writeFileSync(temp, JSON.stringify(store, null, 2));
@@ -134,10 +165,11 @@ function saveStore(store: Store): void {
 
 export function updateStore<T>(mutator: (store: Store) => T): Promise<T> {
   const current = runtime();
-  const job = current.queue.then(() => {
-    const store = loadStore();
+  const job = current.queue.then(async () => {
+    const store = await loadStore();
+    const before = structuredClone(store);
     const result = mutator(store);
-    saveStore(store);
+    await saveStore(store, before);
     publish();
     return result;
   });

@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       <h2>What stays on this machine</h2>
       <ul>
         <li>The project name and folder path.</li>
-        <li>The tasks you assign, each agent’s status, and the notes they write. These live in a local data file.</li>
+        <li>The tasks you assign, each agent’s status, the notes they write, the file paths they touch, and a log of those steps. On a server these live in Postgres. On your own computer they live in a local data file.</li>
         <li>Your Cursor API key, if you set one. It stays in a local env file and is never included in the page.</li>
       </ul>
 
